@@ -1,37 +1,40 @@
-// Viewport center on selection and zoom to fit selection in view + padding- viewport-center-selection-zoom-to-fit.jsx
-
-// Description:
-// ... it uhh centers the viewport on selection at 100%
+/******************************************************************************
+>> Center Viewport - Zoom to Fit (+ a little padding for aesthetics)
+******************************************************************************/
 
 var
-  x_centerpoint = 0,
-  y_centerpoint= 0,
-  geometricBounds,
-  topL_X = 0,
-  topL_Y = 0,
-  botR_X = 0,
-  botR_Y = 0,
-  selection = app.activeDocument.selection,
+	artboard = app.activeDocument.artboards[app.activeDocument.artboards.getActiveArtboardIndex()],
+	x_centerpoint = 0,
+	y_centerpoint = 0,
+	geometricBounds,
+	topL_X = 0,
+	topL_Y = 0,
+	botR_X = 0,
+	botR_Y = 0,
+	selection = app.activeDocument.selection,
+	// change this to modify the amount of padding around selection you would like to retain.
+	padding = 0.05; // .05 = 5% of the height/width of the current selection.
 
-  // change this to modify the amount of padding around selection you would like to retain.
-  padding = .05, // .05 = 5% of the height/width of the current selection.
-
-  artboard = app.activeDocument.artboards[app.activeDocument.artboards.getActiveArtboardIndex()];
 
 if (selection.length > 0) {
 
+	// loop through selections and calc their collective center point
 	for (var i = selection.length - 1; i >= 0; i--) {
 
+		if (selection.length == 1) {
 
+		}
 		geometricBounds = selection[i].geometricBounds;
 
 		topL_X_temp = geometricBounds[0];
 		topL_Y_temp = geometricBounds[1];
+
 		botR_X_temp = geometricBounds[2];
 		botR_Y_temp = geometricBounds[3];
 
 		topL_X = topL_X ? topL_X : topL_X_temp;
 		topL_Y = topL_Y ? topL_Y : topL_Y_temp;
+
 		botR_X = botR_X ? botR_X : botR_X_temp;
 		botR_Y = botR_Y ? botR_Y : botR_Y_temp;
 
@@ -42,84 +45,77 @@ if (selection.length > 0) {
 
 	}
 
-	x_centerpoint = (topL_X + botR_X) / 2;
-	y_centerpoint = (topL_Y + botR_Y) / 2;
+} else {
+	// use artboard boundaries if nothing is selected
+	topL_X = artboard.artboardRect[0];
+	topL_Y = artboard.artboardRect[1];
 
-	if ( app.documents.length > 0 ) {
-		app.documents[0].views[0].bounds; // bounds of view
+	botR_X = artboard.artboardRect[2];
+	botR_Y = artboard.artboardRect[3];
 
-		var viewBounds = app.documents[0].views[0].bounds;
+}
 
-		var zoom100 = {
-			topLeft: {
-				x: viewBounds[0],
-				y: viewBounds[1]
-			},
-			botRight: {
-				x: viewBounds[2],
-				y: viewBounds[3]
-			}
+x_centerpoint = (topL_X + botR_X) / 2;
+y_centerpoint = (topL_Y + botR_Y) / 2;
+
+
+if ( app.documents.length > 0 ) { // not sure if this line is necessary - sking
+
+	var
+		selectionWidth, selectionHeight,
+		newBoundary = {},
+		viewBounds,
+		selectionLayout = "landscape",
+		viewport_layout = "portrait",
+		visibleWidth,
+		visibleWidth_100,
+		visibleHeight,
+		visibleHeight_100;
+
+	viewBounds = {
+		topLeft: {
+			x: app.documents[0].views[0].bounds[0],
+			y: app.documents[0].views[0].bounds[1]
+		},
+		botRight: {
+			x: app.documents[0].views[0].bounds[2],
+			y: app.documents[0].views[0].bounds[3]
 		}
+	};
 
-		var visibleWidth_100, visibleHeight_100;
+	visibleWidth  = Math.abs(viewBounds.topLeft.x - viewBounds.botRight.x); // calc difference
+	visibleHeight = Math.abs(viewBounds.topLeft.y - viewBounds.botRight.y); // calc difference
 
-		visibleWidth_100  = Math.abs(zoom100.topLeft.x - zoom100.botRight.x) // calc difference
-		visibleHeight_100 = Math.abs(zoom100.topLeft.y - zoom100.botRight.y) // calc difference
+	selectionWidth  = Math.abs(topL_X - botR_X);
+	selectionHeight = Math.abs(topL_Y - botR_Y);
 
-		// get object height & width
-		var elementWidth, elementHeight;
+	newBoundary.width = selectionWidth + (selectionWidth * padding);
+	newBoundary.height = selectionHeight + (selectionHeight * padding);
 
-		// geometricBounds = selection[i].geometricBounds;
-		elementWidth  = Math.abs(topL_X - botR_X);
-		elementHeight = Math.abs(topL_Y - botR_Y);
-
-		var newBoundary = {};
-		newBoundary.width = elementWidth + (elementWidth * padding);
-		newBoundary.height = elementHeight + (elementHeight * padding);
-
-		if (elementWidth >= elementHeight) {
-			newBoundary = elementWidth + (elementWidth * padding);
-			layout = "landscape";
-		} else {
-			newBoundary = elementHeight + (elementHeight * padding);
-			layout = "portrait";
-		}
-
-		var viewport_layout = "portrait";
-		if (elementWidth == elementHeight) {
-			if (visibleWidth_100 >= visibleHeight_100) {
-				viewport_layout = "landscape";
-			}
-		}
-
-		// calculate zoom level
-		currentZoom = app.documents[0].views[0].zoom;
-
-		visibleWidth_100 = visibleWidth_100 * currentZoom;
-		visibleHeight_100 = visibleHeight_100 * currentZoom;
-
-		if (layout == "landscape") {
-			if (elementWidth == elementHeight && viewport_layout == "landscape") {
-				newZoomLvl = visibleHeight_100 / newBoundary;
-			} else {
-				newZoomLvl = visibleWidth_100 / newBoundary;
-			}
-		}
-
-		if (layout == "portrait") {
-			if (elementWidth == elementHeight && viewport_layout == "portrait") {
-				newZoomLvl = visibleWidth_100 / newBoundary;
-			} else {
-				newZoomLvl = visibleHeight_100 / newBoundary;
-			}
-		}
-
+	if (visibleWidth >= visibleHeight) {
+		viewport_layout = "landscape";
 	}
 
-} else {
-	// Get the Height of the Artboard
-	x_centerpoint = (artboard.artboardRect[0] + artboard.artboardRect[2]) / 2;
-	y_centerpoint = (artboard.artboardRect[1] + artboard.artboardRect[3]) / 2;
+	if (selectionWidth < selectionHeight) {
+		selectionLayout = "portrait";
+	}
+
+	currentZoom = app.documents[0].views[0].zoom;
+
+	// calculate visible area at 100% zoom
+	visibleWidth_100 = visibleWidth * currentZoom;
+	visibleHeight_100 = visibleHeight * currentZoom;
+
+	if ( (selectionLayout == "portrait") && (selectionWidth == selectionHeight && viewport_layout == "portrait") ){
+		newZoomLvl = visibleWidth_100 / newBoundary.width;
+
+	} else if (selectionLayout == "landscape") {
+		newZoomLvl = visibleWidth_100 / newBoundary.width;
+
+	} else {
+		newZoomLvl = visibleHeight_100 / newBoundary.height;
+
+	}
 
 }
 
