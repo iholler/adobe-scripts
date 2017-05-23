@@ -14,11 +14,14 @@ var
 
 var textRef, paraAttr, paragraphs, geo, position;
 
-function fixJustLeftBug(el){
+function textJustLeft(el, textObject) {
+	// resize used here as workaround for adobe text align left scripting bug.
+	// otherwise the justification remains unchanged.
 	el.resize(1000.0,1000.0);
+	textObject.justification = Justification.LEFT; // set alignment
 	el.resize(10.0,10.0);
+	return;
 }
-
 
 if (selection.length > 0) {
 
@@ -30,9 +33,7 @@ if (selection.length > 0) {
 
 		for (var j = paragraphs.length - 1; j >= 0; j--) {
 			paraAttr = paragraphs[j].paragraphAttributes;
-
-			fixJustLeftBug(selection[i]); // fix for buggy justify-left
-			paraAttr.justification = Justification.LEFT; // set alignment
+			textJustLeft(selection[i], paraAttr);
 		}
 
 		// set new position
